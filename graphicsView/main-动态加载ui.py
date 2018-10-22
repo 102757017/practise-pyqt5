@@ -12,6 +12,15 @@ class MainWindow(QtWidgets.QMainWindow):
 		super(MainWindow, self).__init__(parent)
 		loadUi('form1.ui', self)
 
+		'''
+                物体坐标系：以物体的中心为原点（0,0），物体的位置是指物体的中心点，在它的父物体坐标系中的坐标（父物体原点是父物体的中心），没有parent的物体，场景scene就是该物体的parent
+                场景坐标：所有物体相对于Scene的坐标，Scene可以理解为矩形的画布，Scene的中心为原点
+                          当scene<GraphicsView时，scene与GraphicsView的默认对齐方式为居中对齐，当scene长宽均>GraphicsViews时，scene与GraphicsView的默认对齐方式为左上角对齐。
+                          向scene中addItem时使用的坐标为场景坐标。
+                视图坐标：所有物体相对于GraphicsView的坐标(与窗口相同)，GraphicsView可以理解为画布上的一个可移动的小小的镜头，始终以窗口左上角为原点，正方向x朝右，y朝下。视图坐标是可以移动的
+                          鼠标移动、点击事件返回的坐标均是视图坐标，因此addItem时必须使用mapToScene（）将视图坐标转换为场景坐标
+                '''
+
 		#建立画板
 		self.graphicsView.scene = QGraphicsScene(self)
 		self.graphicsView.setScene(self.graphicsView.scene)
@@ -23,8 +32,9 @@ class MainWindow(QtWidgets.QMainWindow):
 		def mousePressEvent(self, e):
 			print("mousePressEvent", e.button())
 			self.flag = True
-			self.x0 = e.x()
-			self.y0 = e.y()
+			#鼠标返回的是视图坐标，将视图坐标转换为场景坐标
+			self.x0 = self.mapToScene(e.pos()).x()
+			self.y0 = self.mapToScene(e.pos()).y()
 			# 主窗口中如果不使用grabMouse()，将只能响应mousepress事件而不能响应mouserelease事件以及mousemove事件
 			#self.grabMouse()
 
@@ -39,6 +49,10 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.rect = QGraphicsRectItem(self.x0, self.y0, 0, 0)
 				# 设置为可选择，可拖拽
 				self.rect.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemIsMovable)
+				#设置边框为红色
+				self.rect.setPen(QColor(255, 0, 0))
+				#设置填充色为透明
+				self.rect.setBrush(QColor(255, 255, 255, 0))
 				self.scene.addItem(self.rect)
 
 			# 添加椭圆的子函数
@@ -53,15 +67,17 @@ class MainWindow(QtWidgets.QMainWindow):
 			if self.draw == "Text":
 				self.text = QGraphicsTextItem("hello world")
 				self.text.setPos(QPoint(self.x0, self.y0))
+				#设置文本的颜色
+				self.text.setDefaultTextColor(QColor(255, 0, 0))
 				self.scene.addItem(self.text)
 
 			self.scene.update()
 
 		# 定义鼠标移动事件
 		def mouseMoveEvent(self, e):
-			print("mouseMoveEvent：", e.pos())
-			self.x2 = e.x()
-			self.y2 = e.y()
+			print("mouseMoveEvent：", self.mapToScene(e.pos()))
+			self.x2 = self.mapToScene(e.pos()).x()
+			self.y2 = self.mapToScene(e.pos()).y()
 
 			# 修改矩形大小
 			if hasattr(self, "rect") and self.draw == "Rect" and self.flag == True:
@@ -81,8 +97,8 @@ class MainWindow(QtWidgets.QMainWindow):
 		def mouseReleaseEvent(self, e):
 			print("mouseReleaseEvent", e.button())
 			self.flag = False
-			self.x1 = e.x()
-			self.y1 = e.y()
+			self.x1 = self.mapToScene(e.pos()).x()
+			self.y1 = self.mapToScene(e.pos()).y()
 			print("鼠标释放坐标：", e.x(), e.y())
 			#self.releaseMouse()
 
