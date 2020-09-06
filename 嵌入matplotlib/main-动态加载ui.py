@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 from PyQt5 import  QtWidgets
 import sys
+import os
 from PyQt5.uic import loadUi
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -63,10 +64,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 if __name__ == "__main__":
-	# 创建了一个PyQt封装的QApplication对象,创建的时候,把系统参数传进去了.顾名思义,这一句创建了一个应用程序对象
-	app = QtWidgets.QApplication(sys.argv)
-	# #创建一个我们生成的那个窗口，注意把类名修改为MainWindow
-	mainWindow = MainWindow()
-	mainWindow.show()
-	sys.exit(app.exec_())
-
+    os.chdir(sys.path[0])
+    # 创建了一个PyQt封装的QApplication对象,创建的时候,把系统参数传进去了.顾名思义,这一句创建了一个应用程序对象
+    app = QtWidgets.QApplication(sys.argv)
+    #创建一个我们生成的那个窗口，注意把类名修改为MainWindow
+    mainWindow = MainWindow()
+    mainWindow.show()
+    sys.exit(app.exec_())

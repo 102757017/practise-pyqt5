@@ -1,10 +1,10 @@
-# -*- mode: python -*-
+# -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['H:\\Ñ§Ï°×ÊÁÏ\\±à³ÌÑ§Ï°\\pathon\\»ù´¡²Ù×÷\\basic\\pyqt¼Ó·¨Æ÷'],
+             pathex=['h:\\å­¦ä¹ èµ„æ–™\\ç¼–ç¨‹å­¦ä¹ \\pathon\\åŸºç¡€æ“ä½œ\\practise-pyqt5\\pyqtåŠ æ³•å™¨'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -13,14 +13,17 @@ a = Analysis(['main.py'],
              excludes=[],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
-             cipher=block_cipher)
+             cipher=block_cipher,
+             noarchive=False)
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
+          [],
           exclude_binaries=True,
           name='main',
           debug=False,
+          bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           console=True )
@@ -30,4 +33,5 @@ coll = COLLECT(exe,
                a.datas,
                strip=False,
                upx=True,
+               upx_exclude=[],
                name='main')

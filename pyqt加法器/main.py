@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from form1 import Ui_MainWindow
 import sys
+import os
 import form2
 
 # 继承自Ui_MainWindow类，注意我把Ui_MainWindow放在了form1.py中，如果你把这个类放在了XXX.py文件中，就应该是XXX.Ui_MainWindow
@@ -54,6 +55,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
 if __name__ == "__main__":
+    os.chdir(sys.path[0])
     # 创建了一个PyQt封装的QApplication对象,创建的时候,把系统参数传进去了.顾名思义,这一句创建了一个应用程序对象
     app = QtWidgets.QApplication(sys.argv)
     # #创建一个我们生成的那个窗口，注意把类名修改为MainWindow
