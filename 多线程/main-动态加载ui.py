@@ -26,6 +26,8 @@ class MainWindow(QMainWindow):
         #使按钮不可用
         self.pushButton.setEnabled(False)
         self.pushButton_2.setEnabled(True)
+
+        
         self.thread.set_flag_true()
         #此处必须用start方法启动子进程，不能用run方法
         self.thread.start()
