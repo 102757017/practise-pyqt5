@@ -44,7 +44,8 @@ class MainWindow(QMainWindow):
         self.pushButton.setText(text)
 
 
-#由于pyqt的主进程是UI进程，主进程中使用循环语句，会导致进程阻塞，UI界面会卡死，因此必须将耗时的作业放在子进程内操作，因此使用QThread创建子进程
+#由于pyqt的主进程是UI进程，主进程中使用循环语句，会导致进程阻塞，UI界面会卡死，因此必须将耗时的作业放在子进程的run方法内操作，因此使用QThread创建子进程
+#必须放在子进程的run方法内,放在其他方法内会导致子进程阻塞，无法收到其它信号，无法退出等问题。
 class MyThread(QThread):
     #创建一个信号，该信号会传递一个str类型的参数给槽函数
     sinOut = pyqtSignal(str)
