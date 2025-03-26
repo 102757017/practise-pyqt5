@@ -69,6 +69,10 @@ class GraphicsViewDrawer:
                 #设置文本的颜色
                 self.current_item.setDefaultTextColor(QColor(255, 0, 0))
                 self.current_item.setPos(self.start_point)
+                
+            # 设置ROI在最上层，否则图形会被视频遮挡
+            self.current_item.setZValue(1)
+            
             if self.current_item:
                 self.scene.addItem(self.current_item)
 
