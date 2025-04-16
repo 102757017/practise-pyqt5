@@ -52,6 +52,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 if roi.unique_id == roi_id:
                     # ROI颜色改变
                     roi.setPen('g')
+                    self.update_table(roi)
                 else:
                     roi.setPen('r')
     def add_roi(self):
@@ -99,7 +100,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def update_stats(self):
         roi = self.sender()
+        self.update_table(roi)
 
+    def update_table(self,roi):
         row = 0
         for attr, value in vars(roi).items():
             if attr in ['unique_id', 'Position', 'RectSize']:
