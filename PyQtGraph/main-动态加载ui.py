@@ -2,8 +2,7 @@ from PyQt5 import  QtWidgets
 import sys
 from PyQt5.uic import loadUi
 from PyQt5 import QtWidgets
-from PyQt5.QtGui import QStandardItemModel
-from PyQt5.QtGui import QColor, QPixmap
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
 import pyqtgraph as pg
 from types import MethodType
 import os
@@ -19,7 +18,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # 将 QGraphicsView 替换为 PlotWidget
         self.plot = pg.PlotWidget()
         self.horizontalLayout.addWidget(self.plot)
-        self.horizontalLayout.setStretch(1, 5)  #设置水平布局的比例
+        self.horizontalLayout.setStretch(1, 4)  #设置水平布局的比例
         self.plot.setBackground('w')  # 设置背景颜色为白色
         self.plot.showAxis('bottom', show=False)  # 隐藏底部坐标轴
         self.plot.showAxis('left', show=False)    # 隐藏左侧坐标轴
@@ -27,7 +26,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.img_item = pg.ImageItem()
         self.plot.addItem(self.img_item)
 
-        # 创建数据模型
+        #创建列表的数据模型
+        self.listViewModel = QStandardItemModel()
+        self.listViewModel.setColumnCount(2)
+        self.listViewModel.setHorizontalHeaderLabels(["ROI名称","索引id"])  # 设置表头
+        self.listView.setModel(self.listViewModel)
+
+        # 创建属性数据模型
         self.model = QStandardItemModel()  
         self.model.setColumnCount(2)       # 设置列数
         self.model.setHorizontalHeaderLabels(["属性", "值"])  # 设置表头
@@ -38,14 +43,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actionOpenCamera.triggered.connect(self.open_camera)
         self.pushButton_1.clicked.connect(self.add_roi)
 
-        self.roi = RectROI(
-            pos=[10, 10],  # 初始位置
-            size=[100, 100],  # 初始大小
-            pen={'color': 'r', 'width': 2},
-            movable=True,
-            rotatable=False,
-            removable=True    #当选择删除ROI的菜单时，ROI会发出sigRemoveRequested 信号
-            )
+
 
     def add_roi(self):
             roi = RectROI(
@@ -61,10 +59,32 @@ class MainWindow(QtWidgets.QMainWindow):
             roi.addScaleHandle((0, 0), (1, 1)) # 左下角
             self.plot.addItem(roi)
             roi.sigRegionChanged.connect(self.update_stats)
-            roi.sigRemoveRequested.connect(lambda: self.plot.removeItem(roi))
+            roi.sigRemoveRequested.connect(self.remove_roi)  # 连接删除信号到槽函数
+
+            # 更新列表视图
+            self.listViewModel.appendRow([QStandardItem(roi.name), QStandardItem(str(roi.unique_id))])
+
+    def remove_roi(self):
+        roi = self.sender()
+        self.plot.removeItem(roi)
+
+        # 从列表视图中删除对应的行
+        for i in range(self.listViewModel.rowCount()):
+            if self.listViewModel.item(i, 1).text() == str(roi.unique_id):
+                self.listViewModel.removeRow(i)
+                break
+
+
 
     def update_stats(self):
         roi = self.sender()
+
+        row = 0
+        for attr, value in vars(roi).items():
+            if attr in ['unique_id','Position', 'RectSize']:
+                self.model.setItem(row, 0, QStandardItem(attr))
+                self.model.setItem(row, 1, QStandardItem(str(value)))
+                row += 1
 
     
 
@@ -89,8 +109,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 class RectROI(pg.RectROI):
+    counter = 0
+    members = []
     def __init__(self, *args, **kwargs):
         super(RectROI, self).__init__(*args, **kwargs)
+        self.unique_id = RectROI.counter  # 生成唯一 ID
+        RectROI.counter += 1  # 增加计数器
+        self.name = "ROI" + str(self.unique_id)
+        self.members.append([self.name,self.unique_id])
+        self.Position = [self.pos().x(), self.pos().y()]
+        self.RectSize = [self.size().x(), self.size().y()]
+        self.sigRegionChanged.connect(self.update_position)  # 连接信号到槽函数
+
+    def update_position(self):
+        self.Position = [round(self.pos().x(),2), round(self.pos().y(),2)]
+        self.RectSize = [round(self.size().x(),2), round(self.size().y(),2)]
 
 
     
