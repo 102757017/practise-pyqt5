@@ -22,6 +22,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plot.setMenuEnabled(False)           # 禁用右键菜单
         self.img_item = pg.ImageItem()
         self.plot.addItem(self.img_item)
+        
 
         # 创建列表的数据模型
         self.listViewModel = QStandardItemModel()
