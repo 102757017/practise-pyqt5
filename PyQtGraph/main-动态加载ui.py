@@ -26,12 +26,14 @@ class ROIManager(QtCore.QObject):
         self.active_roi: Optional[RectROI] = None  # 当前活动的ROI
         self.rois: Dict[int, RectROI] = {}  # 存储所有ROI的字典，键是ROI的ID
 
-    def add_roi(self,x=50,y=50,w=100,h=100) -> None:
+    def add_roi(self,x=50,y=50,w=100,h=100, unique_id: Optional[int] = None, name: Optional[str] = None) -> None:
         """添加新的ROI"""
         roi = RectROI(
             image_item=self.image_item,  # 传递图像项引用
             pos=[x, y],  # 初始位置
             size=[w, h],  # 初始大小
+            unique_id=unique_id, # 传递 unique_id 给 RectROI
+            name=name,           # 传递 name 给 RectROI
             pen={'color': 'r', 'width': 1},  # 红色边框
             movable=True,  # 可移动
             rotatable=False,  # 不可旋转
@@ -116,11 +118,23 @@ class RectROI(pg.RectROI):
     """自定义矩形ROI，支持图像统计功能"""
     _counter = 0  # 类变量，用于生成唯一ID
 
-    def __init__(self, image_item: pg.ImageItem, *args, **kwargs): 
+    def __init__(self, image_item: pg.ImageItem, unique_id: Optional[int] = None, name: Optional[str] = None, *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.image_item = image_item  # 关联的图像项
-        self.unique_id = self._generate_id()  # 唯一标识符
-        self.name = f"ROI{self.unique_id}"  # ROI名称
+
+        # 根据是否提供了 unique_id 来设置
+        if unique_id is not None:
+            self.unique_id = unique_id
+            # 更新类计数器，确保新生成的ID不会与已加载的ID冲突
+            RectROI._counter = max(RectROI._counter, unique_id)
+        else:
+            self.unique_id = self._generate_id()  # 唯一标识符
+        # 根据是否提供了 name 来设置
+        if name is not None:
+            self.name = name
+        else:
+            self.name = f"ROI{self.unique_id}"  # ROI名称
+
         # 图像统计信息字典
         self.image_stats: Dict[str, float] = {
             'GrayMax': 0,  # 最大灰度值
@@ -290,6 +304,26 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pushButton_1.clicked.connect(self.roi_manager.add_roi)  # 添加ROI按钮
         self.pushButton_2.clicked.connect(self.roi_manager.clear_all_rois)  # 清除所有ROI按钮
         self.listView.clicked.connect(self._on_list_clicked)  # ROI列表点击事件
+        self.roi_list_model.itemChanged.connect(self._on_roi_name_changed)  # 列表项变化事件
+
+    def _on_roi_name_changed(self, topLeft: QtCore.QModelIndex) -> None:
+        """
+        处理ROI名称在QListView中被手动修改的事件。
+        """
+        # 仅处理第一列（ROI名称）的数据变化
+        if topLeft.column() == 0:
+            new_name = topLeft.data(QtCore.Qt.DisplayRole) # 获取新的名称
+            
+            # 获取同一行第二列的ROI ID
+            roi_id_item = self.roi_list_model.item(topLeft.row(), 1)
+            if roi_id_item:
+                roi_id = int(roi_id_item.text())
+                
+                # 在ROIManager中找到对应的RectROI对象并更新其名称
+                if roi_id in self.roi_manager.rois:
+                    roi = self.roi_manager.rois[roi_id]
+                    roi.name = new_name
+                    print(f"ROI ID {roi_id} 的名称已更新为: {new_name}")
 
     def save_roi(self) -> None:
         #self.roi_manager.rois 是一个字典，其值是 RectROI 类的实例,无法直接序列化为 TOML 格式
@@ -326,11 +360,26 @@ class MainWindow(QtWidgets.QMainWindow):
                 with open(path, "r", encoding="utf-8") as f:
                     rois = toml.load(f)
                 print("ROI配置文件读取成功")
+                self.roi_manager.clear_all_rois()
+                RectROI._counter = 0 #在加载之前重置 RectROI 的计数器，这样可以确保新生成的 ROI ID 在加载的 ROI ID 之后
+
                 for roi_id, roi_dict in rois.items():
-                    self.roi_manager.add_roi(roi_dict.get('pos_x', 50),
-                                             roi_dict.get('pos_y', 50),
-                                             roi_dict.get('size_x', 100),
-                                             roi_dict.get('size_y', 100))
+                    unique_id = roi_dict.get('unique_id')
+                    name = roi_dict.get('name')
+                    pos_x = roi_dict.get('pos_x', 50)
+                    pos_y = roi_dict.get('pos_y', 50)
+                    size_x = roi_dict.get('size_x', 100)
+                    size_y = roi_dict.get('size_y', 100)
+                    self.roi_manager.add_roi(
+                        x=pos_x, 
+                        y=pos_y, 
+                        w=size_x, 
+                        h=size_y, 
+                        unique_id=unique_id, 
+                        name=name
+                        )
+
+
             except Exception as e:
                 print(f"ROI配置文件读取失败: {e}")
 
