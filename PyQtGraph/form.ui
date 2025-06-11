@@ -75,6 +75,8 @@
    </attribute>
    <addaction name="actionOpenImage"/>
    <addaction name="actionOpenCamera"/>
+   <addaction name="actionSaveRoi"/>
+   <addaction name="actionLoadRoi"/>
   </widget>
   <action name="actionOpenImage">
    <property name="text">
@@ -84,6 +86,22 @@
   <action name="actionOpenCamera">
    <property name="text">
     <string>OpenCamera</string>
+   </property>
+  </action>
+  <action name="actionSaveRoi">
+   <property name="text">
+    <string>SaveRoi</string>
+   </property>
+   <property name="toolTip">
+    <string>保存ROI</string>
+   </property>
+  </action>
+  <action name="actionLoadRoi">
+   <property name="text">
+    <string>LoadRoi</string>
+   </property>
+   <property name="toolTip">
+    <string>加载ROI</string>
    </property>
   </action>
  </widget>

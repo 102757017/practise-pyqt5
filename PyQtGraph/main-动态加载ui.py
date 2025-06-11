@@ -2,6 +2,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal, QTimer
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from skimage.feature import graycomatrix, graycoprops #计算灰度共生矩阵
 from PyQt5.uic import loadUi
 import pyqtgraph as pg  # 强大的绘图库
 import sys
@@ -9,7 +10,8 @@ import os
 import cv2  # OpenCV库，用于图像处理
 import numpy as np
 from typing import Optional, Tuple, Dict, Any  # 类型提示
-
+import toml
+import pprint
 
 class ROIManager(QtCore.QObject):
     """ROI管理器，负责ROI的创建、删除和状态跟踪"""
@@ -24,12 +26,12 @@ class ROIManager(QtCore.QObject):
         self.active_roi: Optional[RectROI] = None  # 当前活动的ROI
         self.rois: Dict[int, RectROI] = {}  # 存储所有ROI的字典，键是ROI的ID
 
-    def add_roi(self) -> None:
+    def add_roi(self,x=50,y=50,w=100,h=100) -> None:
         """添加新的ROI"""
         roi = RectROI(
             image_item=self.image_item,  # 传递图像项引用
-            pos=[10, 10],  # 初始位置
-            size=[100, 100],  # 初始大小
+            pos=[x, y],  # 初始位置
+            size=[w, h],  # 初始大小
             pen={'color': 'r', 'width': 1},  # 红色边框
             movable=True,  # 可移动
             rotatable=False,  # 不可旋转
@@ -105,6 +107,11 @@ class ROIManager(QtCore.QObject):
             roi.update_image_stats(image)
 
 
+
+
+
+
+
 class RectROI(pg.RectROI):
     """自定义矩形ROI，支持图像统计功能"""
     _counter = 0  # 类变量，用于生成唯一ID
@@ -144,6 +151,26 @@ class RectROI(pg.RectROI):
             if len(region.shape) == 3:
                 region = cv2.cvtColor(region, cv2.COLOR_RGB2GRAY)
 
+
+            levels = 8  # GLCM的灰度级数
+            quantized_region = (region // (256 // levels)).astype(np.uint8)  # 关键步骤：量化灰度值
+
+            # 计算灰度共生矩阵（参数：距离=1，方向=0度）
+            glcm = graycomatrix(
+                quantized_region, 
+                distances=[1], 
+                angles=[0],
+                levels=levels, 
+                symmetric=True
+                )
+            
+            # 计算纹理特征
+            energy = graycoprops(glcm, 'energy')[0, 0]
+            correlation = graycoprops(glcm, 'correlation')[0, 0]
+            homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]
+            contrast = graycoprops(glcm, 'contrast')[0, 0]
+            
+
             # 计算并更新统计信息
             self.image_stats = {
                 'GrayMax': np.max(region),
@@ -174,6 +201,22 @@ class RectROI(pg.RectROI):
     def dimensions(self) -> Tuple[float, float]:
         """当前ROI尺寸"""
         return self._dimensions
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        返回 ROI 可序列化的字典表示，用于保存到 TOML 文件。
+        """
+        pos = self.pos()
+        size = self.size()
+        # 可以根据需要添加其他属性，如边框颜色等
+        return {
+            "unique_id": self.unique_id,
+            "name": self.name,
+            "pos_x": round(pos.x(), 2),
+            "pos_y": round(pos.y(), 2),
+            "size_x": round(size.x(), 2),
+            "size_y": round(size.y(), 2),
+        }
 
 
 class ImageViewer(pg.PlotWidget):
@@ -242,9 +285,56 @@ class MainWindow(QtWidgets.QMainWindow):
         """连接信号槽"""
         self.actionOpenImage.triggered.connect(self.load_image)  # 打开图像菜单
         self.actionOpenCamera.triggered.connect(self.toggle_camera)  # 打开摄像头菜单
+        self.actionSaveRoi.triggered.connect(self.save_roi)  # 保存ROI配置菜单
+        self.actionLoadRoi.triggered.connect(self.load_roi)  # 加载ROI配置菜单
         self.pushButton_1.clicked.connect(self.roi_manager.add_roi)  # 添加ROI按钮
         self.pushButton_2.clicked.connect(self.roi_manager.clear_all_rois)  # 清除所有ROI按钮
         self.listView.clicked.connect(self._on_list_clicked)  # ROI列表点击事件
+
+    def save_roi(self) -> None:
+        #self.roi_manager.rois 是一个字典，其值是 RectROI 类的实例,无法直接序列化为 TOML 格式
+        serializable_rois = {}
+        for roi_id, roi_obj in self.roi_manager.rois.items():
+            serializable_rois[str(roi_id)] = roi_obj.to_dict() 
+
+        print(serializable_rois)
+            
+        """保存ROI配置到文件"""
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "保存ROI配置", "", "ROI配置文件 (*.toml)"
+        )
+        if not path:
+            print("未选择保存路径")
+        else:
+            try:
+                with open(path, "w", encoding="utf-8") as f:
+                    toml.dump(serializable_rois, f)
+                print("ROI配置文件写入成功")
+
+            except Exception as e:
+                print(f"ROI配置文件写入失败: {e}")
+
+    def load_roi(self) -> None:
+        """加载ROI配置文件"""
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "加载ROI配置", "", "ROI配置文件 (*.toml)"
+        )
+        if not path:
+            print("未选择加载路径")
+        else:
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    rois = toml.load(f)
+                print("ROI配置文件读取成功")
+                for roi_id, roi_dict in rois.items():
+                    self.roi_manager.add_roi(roi_dict.get('pos_x', 50),
+                                             roi_dict.get('pos_y', 50),
+                                             roi_dict.get('size_x', 100),
+                                             roi_dict.get('size_y', 100))
+            except Exception as e:
+                print(f"ROI配置文件读取失败: {e}")
+
+
 
     def load_image(self) -> None:
         """加载图像文件"""
