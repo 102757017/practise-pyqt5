@@ -1,0 +1,630 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1381</width>
+    <height>559</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QWidget" name="horizontalLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>19</x>
+      <y>13</y>
+      <width>1341</width>
+      <height>481</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2">
+     <item>
+      <layout class="QGridLayout" name="gridLayout" columnstretch="1,3,3" columnminimumwidth="0,0,0">
+       <item row="15" column="0">
+        <widget class="QLabel" name="label_16">
+         <property name="text">
+          <string>伽马值</string>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="1">
+        <widget class="QCheckBox" name="checkBox_AUTOFOCUS">
+         <property name="text">
+          <string>启用</string>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0">
+        <widget class="QLabel" name="label_11">
+         <property name="text">
+          <string>自动对焦</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>增益</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>曝光时间</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_9">
+         <property name="text">
+          <string>饱和度</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="comboBox_FRAME_HEIGHT"/>
+       </item>
+       <item row="13" column="0">
+        <widget class="QLabel" name="label_14">
+         <property name="text">
+          <string>背光补偿</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>分辨率</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>摄像头</string>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="0">
+        <widget class="QLabel" name="label_13">
+         <property name="text">
+          <string>自动白平衡</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0">
+        <widget class="QLabel" name="label_10">
+         <property name="text">
+          <string>自动曝光</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>帧率</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>色调</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="comboBox_camid"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>亮度</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>对比度</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="1">
+        <widget class="QCheckBox" name="checkBox_AUTO_EXPOSURE">
+         <property name="text">
+          <string>启用</string>
+         </property>
+        </widget>
+       </item>
+       <item row="14" column="0">
+        <widget class="QLabel" name="label_15">
+         <property name="text">
+          <string>锐度</string>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="1">
+        <widget class="QCheckBox" name="checkBox_AUTO_WB">
+         <property name="text">
+          <string>启用</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="0">
+        <widget class="QLabel" name="label_12">
+         <property name="text">
+          <string>白平衡</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QSpinBox" name="spinBox_BRIGHTNESS"/>
+       </item>
+       <item row="4" column="1">
+        <widget class="QSpinBox" name="spinBox_CONTRAST"/>
+       </item>
+       <item row="5" column="1">
+        <widget class="QSpinBox" name="spinBox_SATURATION"/>
+       </item>
+       <item row="6" column="1">
+        <widget class="QSpinBox" name="spinBox_HUE"/>
+       </item>
+       <item row="7" column="1">
+        <widget class="QSpinBox" name="spinBox_GAIN"/>
+       </item>
+       <item row="8" column="1">
+        <widget class="QSpinBox" name="spinBox_EXPOSURE"/>
+       </item>
+       <item row="11" column="1">
+        <widget class="QSpinBox" name="spinBox_WB_TEMPERATURE"/>
+       </item>
+       <item row="13" column="1">
+        <widget class="QSpinBox" name="spinBox_BACKLIGHT"/>
+       </item>
+       <item row="14" column="1">
+        <widget class="QSpinBox" name="spinBox_SHARPNESS"/>
+       </item>
+       <item row="15" column="1">
+        <widget class="QSpinBox" name="spinBox_GAMMA"/>
+       </item>
+       <item row="2" column="1">
+        <widget class="QComboBox" name="comboBox_FPS"/>
+       </item>
+       <item row="3" column="2">
+        <widget class="QSlider" name="horizontalSlider_BRIGHTNESS">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="2">
+        <widget class="QSlider" name="horizontalSlider_CONTRAST">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="2">
+        <widget class="QSlider" name="horizontalSlider_SATURATION">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2">
+        <widget class="QSlider" name="horizontalSlider_HUE">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="2">
+        <widget class="QSlider" name="horizontalSlider_GAIN">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="2">
+        <widget class="QSlider" name="horizontalSlider_EXPOSURE">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="2">
+        <widget class="QSlider" name="horizontalSlider_WB_TEMPERATURE">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="13" column="2">
+        <widget class="QSlider" name="horizontalSlider_BACKLIGHT">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="14" column="2">
+        <widget class="QSlider" name="horizontalSlider_SHARPNESS">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="15" column="2">
+        <widget class="QSlider" name="horizontalSlider_GAMMA">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_17">
+       <property name="mouseTracking">
+        <bool>false</bool>
+       </property>
+       <property name="autoFillBackground">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QPushButton" name="saveButton">
+    <property name="geometry">
+     <rect>
+      <x>110</x>
+      <y>500</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>保存设定</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>horizontalSlider_BRIGHTNESS</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_BRIGHTNESS</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>339</x>
+     <y>121</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>176</x>
+     <y>117</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_CONTRAST</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_CONTRAST</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>339</x>
+     <y>152</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>180</x>
+     <y>149</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_SATURATION</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_SATURATION</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>339</x>
+     <y>183</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>180</x>
+     <y>180</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_HUE</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_HUE</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>339</x>
+     <y>214</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>180</x>
+     <y>206</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_GAIN</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_GAIN</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>339</x>
+     <y>245</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>176</x>
+     <y>238</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_EXPOSURE</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_EXPOSURE</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>339</x>
+     <y>276</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>169</x>
+     <y>270</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_WB_TEMPERATURE</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_WB_TEMPERATURE</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>339</x>
+     <y>359</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>184</x>
+     <y>352</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_BACKLIGHT</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_BACKLIGHT</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>256</x>
+     <y>411</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>181</x>
+     <y>408</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_SHARPNESS</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_SHARPNESS</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>339</x>
+     <y>447</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>184</x>
+     <y>435</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_GAMMA</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox_GAMMA</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>339</x>
+     <y>478</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>180</x>
+     <y>469</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_BRIGHTNESS</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_BRIGHTNESS</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>166</x>
+     <y>107</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>263</x>
+     <y>105</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_CONTRAST</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_CONTRAST</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>177</x>
+     <y>134</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>267</x>
+     <y>137</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_SATURATION</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_SATURATION</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>180</x>
+     <y>165</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>269</x>
+     <y>168</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_HUE</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_HUE</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>146</x>
+     <y>196</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>291</x>
+     <y>204</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_GAIN</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_GAIN</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>170</x>
+     <y>227</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>262</x>
+     <y>231</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_EXPOSURE</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_EXPOSURE</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>176</x>
+     <y>261</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>270</x>
+     <y>260</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_WB_TEMPERATURE</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_WB_TEMPERATURE</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>178</x>
+     <y>343</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>346</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_BACKLIGHT</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_BACKLIGHT</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>186</x>
+     <y>401</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>266</x>
+     <y>401</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_SHARPNESS</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_SHARPNESS</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>181</x>
+     <y>434</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>267</x>
+     <y>441</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox_GAMMA</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_GAMMA</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>186</x>
+     <y>460</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>259</x>
+     <y>466</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
