@@ -18,7 +18,7 @@
     <item row="0" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout" stretch="1">
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,1,0,0,0,0,2">
+       <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <widget class="QLabel" name="label">
           <property name="text">
@@ -27,7 +27,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QTreeView" name="treeView"/>
+         <widget class="QListView" name="listView"/>
         </item>
         <item>
          <widget class="QPushButton" name="pushButton_1">
@@ -40,20 +40,6 @@
          <widget class="QPushButton" name="pushButton_2">
           <property name="text">
            <string>删除所有选区</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="addGroupButton">
-          <property name="text">
-           <string>增加分组</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="delGroupButton">
-          <property name="text">
-           <string>删除分组</string>
           </property>
          </widget>
         </item>

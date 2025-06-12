@@ -1,7 +1,17 @@
-[1]
+[rois]
+[[rois."Group 1"]]
 unique_id = 1
-name = "测试ROI"
-pos_x = 687.66
-pos_y = 762.12
-size_x = 229.44
-size_y = 272.29
+name = "ROI1"
+pos_x = 449.65
+pos_y = 758.84
+size_x = 100.0
+size_y = 100.0
+
+[[rois."Group 1"]]
+unique_id = 2
+name = "ROI2"
+pos_x = 664.85
+pos_y = 419.19
+size_x = 100.0
+size_y = 100.0
+
