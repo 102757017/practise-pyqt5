@@ -13,7 +13,7 @@ from typing import Optional, Tuple, Dict, Any, List  # 类型提示
 import toml
 import pprint
 
-# Custom data roles for QStandardItem
+# QStandardItem的自定义数据角色
 class CustomRoles:
     """定义自定义数据角色，用于在QStandardItem中存储额外数据"""
     GroupIdRole = QtCore.Qt.UserRole + 1 # 目前未使用，但可保留备用
@@ -32,7 +32,7 @@ class ROIManager(QtCore.QObject):
         self.current_image: Optional[np.ndarray] = None  # 当前显示的图像
         self.active_roi: Optional['RectROI'] = None  # 当前活动的ROI对象
         self.rois: Dict[int, 'RectROI'] = {}  # 存储所有ROI的字典，键是ROI的ID
-        self.active_group_item: Optional[QStandardItem] = None # 当前选中的QStandardItem (group item)
+        self.active_group_item: Optional[QStandardItem] = None # 当前选中的QStandardItem (组项)
 
     def set_active_group_item(self, item: Optional[QStandardItem]) -> None:
         """设置当前激活的组节点"""
@@ -51,7 +51,7 @@ class ROIManager(QtCore.QObject):
             group_name = f"Group {i}"
 
         group_item = QStandardItem(group_name)
-        group_item.setEditable(True)
+        group_item.setEditable(True) # 组名可编辑
         self.tree_model.appendRow(group_item)
         return group_item
 
@@ -72,7 +72,7 @@ class ROIManager(QtCore.QObject):
             rotatable=False,  # 不可旋转
             removable=True  # 可移除
         )
-        roi.setAcceptedMouseButtons(QtCore.Qt.MouseButton.LeftButton)
+        roi.setAcceptedMouseButtons(QtCore.Qt.MouseButton.LeftButton) # 设置接受鼠标左键事件
         self.plot.addItem(roi)  # 将ROI添加到绘图区域
         self._setup_roi_handles(roi)  # 设置ROI的控制点
         self._connect_roi_signals(roi)  # 连接信号槽
@@ -121,7 +121,7 @@ class ROIManager(QtCore.QObject):
             roi = self.rois[roi_id]
             self.remove_roi_obj(roi)
         else:
-            print(f"Warning: ROI with ID {roi_id} not found.")
+            print(f"警告: 未找到ID为 {roi_id} 的ROI。")
 
     def _remove_from_tree_model(self, roi_id: int) -> None:
         """从QTreeView模型中移除指定ROI的QStandardItem"""
@@ -165,7 +165,7 @@ class ROIManager(QtCore.QObject):
         # 还要在QTreeView中选中对应的项
         # 这需要在MainWindow中处理，因为ROIManager没有QTreeView的引用
         # 而是通过信号通知MainWindow
-        self.roi_selected.emit(roi) # Re-emit to trigger UI update in main window
+        self.roi_selected.emit(roi) # 重新发射信号以触发主窗口的UI更新
 
     def _update_selection(self, selected_roi: 'RectROI') -> None:
         """更新ROI选中状态（边框颜色）"""
@@ -173,7 +173,7 @@ class ROIManager(QtCore.QObject):
         # 遍历所有ROI，设置边框颜色（选中为绿色，未选中为红色）
         for roi in self.rois.values():
             roi.setPen('g' if roi == selected_roi else 'r')
-        # 不需要再次emit roi_selected，因为 _on_roi_clicked 已经emit了
+        # 不需要再次发射 roi_selected 信号，因为 _on_roi_clicked 已经发射过了
 
     def update_image_data(self, image: np.ndarray) -> None:
         """更新当前图像数据"""
@@ -195,7 +195,7 @@ class RectROI(pg.RectROI):
         if unique_id is not None:
             self.unique_id = unique_id
             # 更新类计数器，确保新生成的ID不会与已加载的ID冲突
-            RectROI._counter = max(RectROI._counter, unique_id) # Ensure counter is always ahead
+            RectROI._counter = max(RectROI._counter, unique_id) # 确保计数器始终领先
         else:
             self.unique_id = self._generate_id()  # 唯一标识符
         # 根据是否提供了 name 来设置
@@ -229,12 +229,12 @@ class RectROI(pg.RectROI):
         """更新图像统计信息"""
         try:
             # 获取ROI区域内的图像数据
-            # getArrayRegion will return None if the ROI is outside image bounds or 0-sized
+            # 如果ROI超出图像边界或尺寸为0，getArrayRegion将返回None
             region = self.getArrayRegion(image, self.image_item)
             
             if region is None or region.size == 0 or region.shape[0] == 0 or region.shape[1] == 0:
-                # print("ROI region is empty or invalid, cannot calculate stats.")
-                # Optionally, reset stats to 0 or leave them as they are
+                # print("ROI区域为空或无效，无法计算统计数据。")
+                # 可选：将统计数据重置为0或保持不变
                 self.image_stats = {k: 0 for k in self.image_stats}
                 self._position = (round(self.pos().x(), 2), round(self.pos().y(), 2))
                 size = super().size()
@@ -250,36 +250,38 @@ class RectROI(pg.RectROI):
                 region = cv2.cvtColor(region, cv2.COLOR_RGB2GRAY)
 
 
-            # GLCM calculation
-            # Only compute GLCM if region is large enough (at least 2x2 pixels)
-            # and has some variation (not all pixels are the same)
+            # GLCM 计算
+            # 仅当区域足够大（至少2x2像素）且有变化（并非所有像素都相同）时才计算GLCM
             if region.shape[0] >= 2 and region.shape[1] >= 2 and np.std(region) > 0:
-                levels = 8  # GLCM的灰度级数
-                # Quantize region to desired levels. Essential for GLCM on continuous data.
+                levels = 32  # GLCM的灰度级数。通常将256级灰度图像量化到较少的级别（如8、16、32），目的是减小GLCM矩阵的尺寸（例如8x8而不是256x256）降低计算复杂性，并使计算出的纹理特征更具普适性和鲁棒性，减少噪声影响。
+                # 如果 levels=8，则每个量化区间的宽度为 256 // 8 = 32。像素值 0-31 会被映射为 0，32-63 映射为 1，依此类推。
                 quantized_region = (region // (256 // levels)).astype(np.uint8)
                 
-                # Check for unique values in quantized region, if only one, GLCM fails
+                # 检查量化区域中的唯一值，如果只有一个，GLCM将失败
                 if len(np.unique(quantized_region)) > 1:
                     glcm = graycomatrix(
                         quantized_region, 
-                        distances=[1], 
-                        angles=[0],
-                        levels=levels, 
-                        symmetric=True, 
-                        normed=True # Normalized GLCM for prop calculation
+                        distances=[1], # 考虑像素对之间的距离为1。这意味着只检查紧邻的像素。如果需要考虑不同距离，可以提供 [1, 2, 3] 等。
+                        angles=[0],# 考虑角度为0度（水平方向）。这意味着只检查像素右侧的相邻像素。其他常用角度包括 45, 90, 135 度。
+                        levels=levels, # GLCM矩阵的灰度级数，应与量化后的图像级别一致。
+                        symmetric=True, # 设置GLCM为对称矩阵。这意味着像素对(i,j)的出现次数与(j,i)相同。
+                        normed=True # 将GLCM归一化，使其元素表示概率。这是计算纹理属性的前提。
                         )
                     
-                    # Calculate texture features
-                    energy = graycoprops(glcm, 'energy')[0, 0]
-                    correlation = graycoprops(glcm, 'correlation')[0, 0]
-                    homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]
-                    contrast = graycoprops(glcm, 'contrast')[0, 0]
+                    # 计算纹理特征
+                    energy = graycoprops(glcm, 'energy')[0, 0]# 能量：衡量图像纹理的均匀性和局部秩序。能量值越大，表示纹理越均匀、越细致，变化越小。
+                    correlation = graycoprops(glcm, 'correlation')[0, 0] #相关性：衡量像素灰度级之间空间依赖关系的线性度。值越大，表示灰度级之间相关性越强，纹理越粗糙、规律性越强。
+                    homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]# 同质性：衡量图像纹理的局部均匀性。值越大，表示灰度级差异越小，纹理越均匀、越平坦。
+                    contrast = graycoprops(glcm, 'contrast')[0, 0] # 对比度：反映图像纹理的对比度或局部灰度级差异的大小。值越大，表示纹理越深、越粗糙，灰度变化越剧烈。
                 else:
+                    # 如果经过量化后，区域内的所有像素值都相同（即没有变化），则无法计算有效的纹理特征。此时将所有纹理特征值设为0.0。
                     energy, correlation, homogeneity, contrast = 0.0, 0.0, 0.0, 0.0
             else:
+                # 如果ROI区域尺寸不足以进行GLCM计算，或者原始区域内没有灰度变化（所有像素值都相同），则直接将所有纹理特征值设为0.0，表示无法计算。
                 energy, correlation, homogeneity, contrast = 0.0, 0.0, 0.0, 0.0
+                
 
-            # Calculate and update statistical information
+            # 计算并更新统计信息
             self.image_stats = {
                 'GrayMax': np.max(region),
                 'GrayMin': np.min(region),
@@ -291,15 +293,15 @@ class RectROI(pg.RectROI):
                 'Contrast': contrast
                 }
             
-            # Update position and dimensions information
+            # 更新位置和尺寸信息
             self._position = (round(self.pos().x(), 2), round(self.pos().y(), 2))
-            size = super().size()  # Explicitly call parent's size method
+            size = super().size()  # 显式调用父类的size方法
             self._dimensions = (round(size.x(), 2), round(size.y(), 2))
             
         except Exception as e:
-            # print(f"Error updating image stats for ROI {self.name}: {str(e)}")
-            # If an error occurs, set stats to 0 or N/A
-            self.image_stats = {k: 0 for k in self.image_stats} # Reset on error
+            # print(f"更新ROI {self.name} 的图像统计数据时出错: {str(e)}")
+            # 如果发生错误，将统计数据设置为0或N/A
+            self.image_stats = {k: 0 for k in self.image_stats} # 错误时重置
             self._position = (round(self.pos().x(), 2), round(self.pos().y(), 2))
             size = super().size()
             self._dimensions = (round(size.x(), 2), round(size.y(), 2))
@@ -334,7 +336,7 @@ class RectROI(pg.RectROI):
             "size_y": round(size.y(), 2),
         }
 
-# GroupItem class is removed as it's no longer necessary for the new TOML structure.
+# GroupItem 类已移除，因为它不再是新TOML结构所必需的。
 
 
 class ImageViewer(pg.PlotWidget):
@@ -361,6 +363,22 @@ class ImageViewer(pg.PlotWidget):
 
 class MainWindow(QtWidgets.QMainWindow):
     """主窗口"""
+    # 定义一个字典来存储属性名和它们的提示文本
+    PROPERTY_TOOLTIPS = {
+        "ID": "ROI的唯一标识符，系统自动生成。",
+        "名称": "ROI的自定义名称，可以在树视图中双击修改。",
+        "位置": "ROI左上角的X, Y坐标，表示ROI在图像中的起始位置。",
+        "尺寸": "ROI的宽度和高度，表示ROI的像素大小。",
+        "最大灰度值": "ROI区域内像素的最大灰度值，反映区域中最亮的点。",
+        "最小灰度值": "ROI区域内像素的最小灰度值，反映区域中最暗的点。",
+        "平均灰度值": "ROI区域内像素的平均灰度值，反映区域的整体亮度。",
+        "灰度值极差": "ROI区域内像素的最大灰度值与最小灰度值之差，反映区域的灰度分布范围。",
+        "能量": "衡量图像纹理的均匀性和局部秩序。能量值越大，表示纹理越均匀、越细致，变化越小。",
+        "相关性": "衡量像素灰度级之间空间依赖关系的线性度。值越大，表示灰度级之间相关性越强，纹理越粗糙、规律性越强。",
+        "均匀性": "衡量图像纹理的局部均匀性。值越大，表示灰度级差异越小，纹理越均匀、越平坦。",
+        "对比度": "反映图像纹理的对比度或局部灰度级差异的大小。值越大，表示纹理越深、越粗糙，灰度变化越剧烈。"
+    }
+
     def __init__(self):
         super().__init__()
         loadUi('form.ui', self)  # 加载UI文件
@@ -384,6 +402,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.property_model = QStandardItemModel()
         self.property_model.setHorizontalHeaderLabels(["属性", "值"])
         self.tableView.setModel(self.property_model)
+        # 调整表格列宽，使第一列拉伸以适应内容，第二列内容自适应
+        self.tableView.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
+        self.tableView.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
+
 
         # 初始化ROI管理器
         self.roi_manager = ROIManager(
@@ -394,9 +416,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.roi_manager.roi_selected.connect(self._on_roi_selected_update_ui)
         self.roi_manager.group_selected.connect(self._on_group_selected_update_ui)
 
-        # 设置Add ROI按钮初始状态 (未选中分组时禁用)
+        # 设置“添加ROI”按钮初始状态 (未选中分组时禁用)
         self.pushButton_1.setEnabled(False) 
-        self.delGroupButton.setEnabled(False) # 初始时，DelGroup按钮也禁用
+        self.delGroupButton.setEnabled(False) # 初始时，“删除组/ROI”按钮也禁用
 
     def _setup_camera(self) -> None:
         """初始化摄像头相关组件"""
@@ -436,7 +458,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     roi.name = new_name
                     # print(f"ROI ID {roi_id} 的名称已更新为: {new_name}")
             else: # 可能是组名，目前组名没有对应对象，不需要额外处理
-                # print(f"Group name updated to: {new_name}")
+                # print(f"组名已更新为: {new_name}")
                 pass 
 
     def _on_tree_selection_changed(self, current: QModelIndex, previous: QModelIndex) -> None:
@@ -444,39 +466,39 @@ class MainWindow(QtWidgets.QMainWindow):
         处理QTreeView中选中项的变化。
         根据选中项是组还是ROI，更新按钮状态和属性表格。
         """
-        self._update_property_table(None) # Clear property table first
+        self._update_property_table(None) # 首先清空属性表
 
         if not current.isValid():
-            # Nothing selected
+            # 未选中任何项
             self.roi_manager.set_active_group_item(None) 
-            self.roi_manager._update_selection(None) # De-select all ROIs in plot
-            self.pushButton_1.setEnabled(False) # Add ROI button disabled
-            self.delGroupButton.setEnabled(False) # Del Group/ROI button disabled
+            self.roi_manager._update_selection(None) # 取消选中绘图区所有ROI
+            self.pushButton_1.setEnabled(False) # 禁用“添加ROI”按钮
+            self.delGroupButton.setEnabled(False) # 禁用“删除组/ROI”按钮
             return
 
         item = self.tree_model.itemFromIndex(current)
         if item is None: 
             return
 
-        # Check if the selected item is a group (top-level item)
+        # 检查选中项是否为组（顶级项）
         if not current.parent().isValid():
-            # This is a group item
+            # 这是组项
             self.roi_manager.set_active_group_item(item)
-            self.roi_manager._update_selection(None) # De-select any active ROI in plot
-            self.pushButton_1.setEnabled(True) # Enable Add ROI button
-            self.delGroupButton.setEnabled(True) # Enable Del Group button
-            self._update_property_table(None) # No ROI selected, clear table
+            self.roi_manager._update_selection(None) # 取消选中绘图区任何活动的ROI
+            self.pushButton_1.setEnabled(True) # 启用“添加ROI”按钮
+            self.delGroupButton.setEnabled(True) # 启用“删除组”按钮
+            self._update_property_table(None) # 未选中ROI，清空表格
         else:
-            # This is an ROI item (child of a group)
+            # 这是ROI项（组的子项）
             roi_id = item.data(CustomRoles.RoiIdRole)
             if roi_id is not None and roi_id in self.roi_manager.rois:
                 roi = self.roi_manager.rois[roi_id]
-                self.roi_manager._update_selection(roi) # Select this ROI in plot
-                self.roi_manager.set_active_group_item(item.parent()) # Set parent group as active
-                self.pushButton_1.setEnabled(True) # Still enable Add ROI (can add to parent group)
-                self.delGroupButton.setEnabled(True) # Enable Del ROI button
+                self.roi_manager._update_selection(roi) # 在绘图区选中此ROI
+                self.roi_manager.set_active_group_item(item.parent()) # 将父组设为活动组
+                self.pushButton_1.setEnabled(True) # 仍然启用“添加ROI”（可以添加到父组）
+                self.delGroupButton.setEnabled(True) # 启用“删除ROI”按钮
             else:
-                # Should not happen if items are managed correctly
+                # 如果项管理正确，不应该发生这种情况
                 self.roi_manager.set_active_group_item(None)
                 self.roi_manager._update_selection(None)
                 self.pushButton_1.setEnabled(False)
@@ -486,7 +508,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """当ROIManager发出roi_selected信号时，更新属性表并选中树视图中的对应项"""
         self._update_property_table(roi)
         if roi:
-            # Find and select the item in the treeView
+            # 在树视图中查找并选中该项
             for group_row in range(self.tree_model.rowCount()):
                 group_item = self.tree_model.item(group_row, 0)
                 if group_item:
@@ -494,26 +516,26 @@ class MainWindow(QtWidgets.QMainWindow):
                         roi_name_item = group_item.child(roi_row, 0)
                         if roi_name_item and roi_name_item.data(CustomRoles.RoiIdRole) == roi.unique_id:
                             index = self.tree_model.indexFromItem(roi_name_item)
-                            # Only set current if not already current to avoid recursion
+                            # 仅在当前未选中时才设置，以避免递归
                             if index != self.treeView.currentIndex():
                                 self.treeView.selectionModel().setCurrentIndex(
                                     index, QtCore.QItemSelectionModel.ClearAndSelect
                                 )
                             return
         else:
-            # If roi is None, clear treeView selection as well
+            # 如果roi为None，则也清空树视图的选中
             self.treeView.selectionModel().clearSelection()
 
 
     def _on_group_selected_update_ui(self, group_item: Optional[QStandardItem]) -> None:
         """当ROIManager发出group_selected信号时，主要用于调试或未来扩展"""
-        # print(f"Group selected in ROIManager: {group_item.text() if group_item else 'None'}")
-        pass # UI state is mostly handled by _on_tree_selection_changed
+        # print(f"ROIManager中选中的组: {group_item.text() if group_item else '无'}")
+        pass # UI状态主要由 _on_tree_selection_changed 处理
 
     def _add_group(self) -> None:
         """添加一个新组"""
         group_item = self.roi_manager.add_group()
-        # Automatically select the newly created group
+        # 自动选中新创建的组
         index = self.tree_model.indexFromItem(group_item)
         self.treeView.selectionModel().setCurrentIndex(
             index, QtCore.QItemSelectionModel.ClearAndSelect
@@ -530,15 +552,15 @@ class MainWindow(QtWidgets.QMainWindow):
         if item is None:
             return
 
-        # Determine if it's a group or an ROI
+        # 判断是组还是ROI
         if not current_index.parent().isValid():
-            # This is a group node
+            # 这是组节点
             reply = QtWidgets.QMessageBox.question(
                 self, "删除确认", f"确定要删除分组 '{item.text()}' 及其下的所有ROI吗？",
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No
             )
             if reply == QtWidgets.QMessageBox.Yes:
-                # Iterate through children (ROIs) and remove them from ROIManager
+                # 遍历子项（ROI）并从ROIManager中删除它们
                 rois_to_delete = []
                 for row in range(item.rowCount()):
                     roi_name_item = item.child(row, 0)
@@ -550,16 +572,16 @@ class MainWindow(QtWidgets.QMainWindow):
                 for roi_id in rois_to_delete:
                     self.roi_manager.remove_roi_by_id(roi_id)
                 
-                # Finally, remove the group from the model
+                # 最后，从模型中删除该组
                 self.tree_model.removeRow(current_index.row())
-                # After deletion, clear selection states
+                # 删除后，清除选中状态
                 self.roi_manager.set_active_group_item(None) 
                 self.roi_manager._update_selection(None) 
                 self._update_property_table(None) 
                 QtWidgets.QMessageBox.information(self, "删除成功", f"分组 '{item.text()}' 及其下的ROI已删除。")
 
         else:
-            # This is an ROI node
+            # 这是ROI节点
             reply = QtWidgets.QMessageBox.question(
                 self, "删除确认", f"确定要删除ROI '{item.text()}' 吗？",
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No
@@ -568,9 +590,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 roi_id = item.data(CustomRoles.RoiIdRole)
                 if roi_id is not None:
                     self.roi_manager.remove_roi_by_id(roi_id)
-                    # The remove_roi_by_id will trigger _remove_from_tree_model
-                    # which handles removing the item from its parent.
-                    # After deletion, clear ROI selection states
+                    # remove_roi_by_id 将触发 _remove_from_tree_model
+                    # 它会处理从父级删除项的操作。
+                    # 删除后，清除ROI选中状态
                     self.roi_manager._update_selection(None) 
                     self._update_property_table(None) 
                     QtWidgets.QMessageBox.information(self, "删除成功", f"ROI '{item.text()}' 已删除。")
@@ -594,29 +616,29 @@ class MainWindow(QtWidgets.QMainWindow):
             print("未选择保存路径")
             return
 
-        # This will be a dictionary where keys are group names and values are lists of ROI dictionaries
+        # 这将是一个字典，其中键是组名，值是ROI字典的列表
         rois_by_group_data: Dict[str, List[Dict[str, Any]]] = {}
 
-        # Iterate through top-level items (groups) in the QTreeView model
+        # 遍历QTreeView模型中的顶级项（组）
         for group_row in range(self.tree_model.rowCount()):
-            group_item = self.tree_model.item(group_row, 0) # Get the QStandardItem for the group name
+            group_item = self.tree_model.item(group_row, 0) # 获取组名的QStandardItem
             if group_item:
                 group_name = group_item.text()
                 current_group_rois_list: List[Dict[str, Any]] = []
 
-                # Iterate through children (ROIs) of the current group
+                # 遍历当前组的子项（ROI）
                 for roi_child_row in range(group_item.rowCount()):
-                    roi_name_item = group_item.child(roi_child_row, 0) # Get the QStandardItem for ROI name
+                    roi_name_item = group_item.child(roi_child_row, 0) # 获取ROI名称的QStandardItem
                     if roi_name_item:
-                        roi_id = roi_name_item.data(CustomRoles.RoiIdRole) # Retrieve ROI ID from custom role
+                        roi_id = roi_name_item.data(CustomRoles.RoiIdRole) # 从自定义角色中检索ROI ID
                         if roi_id is not None and roi_id in self.roi_manager.rois:
                             roi_obj = self.roi_manager.rois[roi_id]
-                            current_group_rois_list.append(roi_obj.to_dict()) # Add ROI's serializable dict
+                            current_group_rois_list.append(roi_obj.to_dict()) # 添加ROI的可序列化字典
 
                 rois_by_group_data[group_name] = current_group_rois_list
 
         try:
-            # Wrap rois_by_group_data in a dictionary with a top-level key "rois"
+            # 将 rois_by_group_data 包装在一个顶级键为 "rois" 的字典中
             toml_data = {"rois": rois_by_group_data}
             
             with open(path, "w", encoding="utf-8") as f:
@@ -640,34 +662,33 @@ class MainWindow(QtWidgets.QMainWindow):
             with open(path, "r", encoding="utf-8") as f:
                 config_data = toml.load(f)
             
-            # Clear existing data before loading new
+            # 加载新数据前，清空现有数据
             self.roi_manager.clear_all_items()
-            RectROI.reset_counter(0) # Reset ROI ID counter before loading
+            RectROI.reset_counter(0) # 加载前重置ROI ID计数器
 
-            # Get the top-level 'rois' table, which is expected to be a dictionary
-            # where keys are group names and values are lists of ROI dictionaries.
+            # 获取顶层 'rois' 表，它应该是一个字典，其中键是组名，值是ROI字典的列表。
             rois_by_group_data = config_data.get("rois", {}) 
             if not isinstance(rois_by_group_data, dict):
-                raise ValueError("TOML file 'rois' section is not a dictionary or is missing.")
+                raise ValueError("TOML文件中的'rois'部分不是字典或缺失。")
 
             max_roi_id = 0
             
-            # Iterate through the groups (keys of rois_by_group_data)
+            # 遍历组（rois_by_group_data 的键）
             for group_name, rois_list_for_group in rois_by_group_data.items():
-                group_item = self.roi_manager.add_group(group_name=group_name) # Add group to model
+                group_item = self.roi_manager.add_group(group_name=group_name) # 添加组到模型
 
-                # Temporarily set the active_group_item for the ROIManager
-                # so that subsequent calls to roi_manager.add_roi correctly associate the ROI
-                # with this specific group_item in the tree model.
+                # 临时设置 ROIManager 的 active_group_item
+                # 以便后续 roi_manager.add_roi 调用能将 ROI 正确关联到
+                # 树模型中的这个特定组项。
                 self.roi_manager.set_active_group_item(group_item) 
                 
                 if not isinstance(rois_list_for_group, list):
-                    print(f"Warning: ROIs for group '{group_name}' is not a list. Skipping.")
+                    print(f"警告: 组 '{group_name}' 的ROI不是列表。跳过。")
                     continue
 
                 for roi_dict in rois_list_for_group:
                     if not isinstance(roi_dict, dict):
-                        print(f"Warning: ROI item in group '{group_name}' is not a dictionary. Skipping.")
+                        print(f"警告: 组 '{group_name}' 中的ROI项不是字典。跳过。")
                         continue
 
                     unique_id = roi_dict.get('unique_id')
@@ -680,7 +701,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     if unique_id is not None:
                         max_roi_id = max(max_roi_id, unique_id)
 
-                    # roi_manager.add_roi uses self.roi_manager.active_group_item internally
+                    # roi_manager.add_roi 在内部使用 self.roi_manager.active_group_item
                     self.roi_manager.add_roi(
                         x=pos_x, 
                         y=pos_y, 
@@ -690,17 +711,17 @@ class MainWindow(QtWidgets.QMainWindow):
                         name=name
                     )
                 
-            # After all groups and ROIs are loaded, clear any selection state in the UI.
+            # 加载完所有组和ROI后，清除UI中的任何选中状态。
             self.treeView.selectionModel().clearSelection()
-            self.roi_manager.set_active_group_item(None) # Ensure ROIManager's active group is clear
-            self.roi_manager._update_selection(None) # Ensure plot ROIs are deselected
-            self._update_property_table(None) # Clear property table
-            self.pushButton_1.setEnabled(False) # Add ROI button disabled
-            self.delGroupButton.setEnabled(False) # Del Group/ROI button disabled
+            self.roi_manager.set_active_group_item(None) # 确保ROIManager的活动组被清空
+            self.roi_manager._update_selection(None) # 确保绘图区的ROI未被选中
+            self._update_property_table(None) # 清空属性表
+            self.pushButton_1.setEnabled(False) # 禁用“添加ROI”按钮
+            self.delGroupButton.setEnabled(False) # 禁用“删除组/ROI”按钮
 
 
-            # After loading all ROIs, ensure the counter is correctly set for future new ROIs
-            RectROI.reset_counter(max_roi_id + 1) # Set counter to max_roi_id + 1 for next unique ID
+            # 加载所有ROI后，确保计数器正确设置为将来新ROI的ID
+            RectROI.reset_counter(max_roi_id + 1) # 将计数器设置为 max_roi_id + 1，用于下一个唯一ID
             QtWidgets.QMessageBox.information(self, "加载成功", "ROI配置已成功加载！")
 
         except Exception as e:
@@ -787,8 +808,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # 逐行添加属性数据
         for row, (key, value) in enumerate(properties.items()):
-            self.property_model.setItem(row, 0, QStandardItem(str(key)))
-            self.property_model.setItem(row, 1, QStandardItem(str(value)))
+            # 创建属性名称项（第一列）
+            key_item = QStandardItem(str(key))
+            
+            # 从 PROPERTY_TOOLTIPS 字典中获取对应的提示文本
+            tooltip_text = self.PROPERTY_TOOLTIPS.get(key, "") 
+            if tooltip_text: # 如果存在提示文本，则设置
+                key_item.setToolTip(tooltip_text)
+            
+            # 创建属性值项（第二列）
+            value_item = QStandardItem(str(value))
+
+            self.property_model.setItem(row, 0, key_item)
+            self.property_model.setItem(row, 1, value_item)
 
     def _show_error(self, message: str) -> None:
         """显示错误信息"""
