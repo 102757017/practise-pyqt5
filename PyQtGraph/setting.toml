@@ -1,17 +1,21 @@
-[rois]
-[[rois."Group 1"]]
-unique_id = 1
-name = "ROI1"
-pos_x = 449.65
-pos_y = 758.84
-size_x = 100.0
-size_y = 100.0
+[camera1]
+address = "DEFAULT_CAMERA_ADDRESS_PLACEHOLDER"
 
-[[rois."Group 1"]]
-unique_id = 2
-name = "ROI2"
-pos_x = 664.85
-pos_y = 419.19
-size_x = 100.0
-size_y = 100.0
+[camera1.ROI."Group 1"]
+model_type = "shitu"
+model_name = "default_model"
+boss1 = [ 224, 385, 100, 100,]
 
+[camera1.ROI."Group 2"]
+model_type = "shitu"
+model_name = "default_model"
+boss2 = [ 477, 33, 100, 100,]
+
+[camera1.ROI."asf Group 3"]
+model_type = "default_type"
+model_name = "default_model"
+
+[camera1.ROI."Group 3"]
+model_type = "default_type"
+model_name = "default_model"
+ROI4 = [ 506, 533, 100, 100,]
