@@ -29,7 +29,7 @@ class ROIManager(QtCore.QObject):
         self.plot = plot_widget  # 绘图区域
         self.tree_model = tree_model  # ROI列表的数据模型 (现在是QTreeView的模型)
         self.image_item = image_item  # 图像项
-        self.current_image: Optional[np.ndarray] = None  # 当前显示的图像
+        self.current_image: Optional[np.ndarray] = None  # 当前显示的图像 (已校正方向的图像)
         self.active_roi: Optional['RectROI'] = None  # 当前活动的ROI对象
         self.rois: Dict[int, 'RectROI'] = {}  # 存储所有ROI的字典，键是ROI的ID
         self.active_group_item: Optional[QStandardItem] = None # 当前选中的QStandardItem (组项)
@@ -42,7 +42,7 @@ class ROIManager(QtCore.QObject):
 
     def add_group(self, group_name: Optional[str] = None) -> QStandardItem:
         """添加一个新的组节点到QTreeView的根目录"""
-        if group_name is None:
+        if group_name is None: 
             # 自动生成组名
             existing_groups = [self.tree_model.item(i, 0).text() for i in range(self.tree_model.rowCount())]
             i = 1
@@ -176,7 +176,9 @@ class ROIManager(QtCore.QObject):
         # 不需要再次发射 roi_selected 信号，因为 _on_roi_clicked 已经发射过了
 
     def update_image_data(self, image: np.ndarray) -> None:
-        """更新当前图像数据"""
+        """更新当前图像数据
+        image: 已经经过方向校正的NumPy数组
+        """
         self.current_image = image
         # 更新所有ROI的图像统计信息
         for roi in self.rois.values():
@@ -184,34 +186,30 @@ class ROIManager(QtCore.QObject):
 
 
 class RectROI(pg.RectROI):
-    """自定义矩形ROI，支持图像统计功能"""
+    """自定义矩形ROI, 支持图像统计功能"""
     _counter = 0  # 类变量，用于生成唯一ID
 
     def __init__(self, image_item: pg.ImageItem, unique_id: Optional[int] = None, name: Optional[str] = None, *args, **kwargs):
         super().__init__(*args,**kwargs)
         self.image_item = image_item  # 关联的图像项
 
-        # 根据是否提供了 unique_id 来设置
         if unique_id is not None:
             self.unique_id = unique_id
-            # 更新类计数器，确保新生成的ID不会与已加载的ID冲突
-            RectROI._counter = max(RectROI._counter, unique_id) # 确保计数器始终领先
+            RectROI._counter = max(RectROI._counter, unique_id) 
         else:
-            self.unique_id = self._generate_id()  # 唯一标识符
-        # 根据是否提供了 name 来设置
-        if name is not None:
+            self.unique_id = self._generate_id()  
+        if name is not None: 
             self.name = name
         else:
-            self.name = f"ROI{self.unique_id}"  # ROI名称
+            self.name = f"ROI{self.unique_id}"  
 
-        # 图像统计信息字典
         self.image_stats: Dict[str, float] = {
-            'GrayMax': 0,  # 最大灰度值
-            'GrayMin': 0,  # 最小灰度值
-            'GrayMean': 0,  # 平均灰度值
-            'GrayRange': 0  # 灰度范围
+            'GrayMax': 0,  
+            'GrayMin': 0,  
+            'GrayMean': 0,  
+            'GrayRange': 0  
         }
-        self._position = (0.0, 0.0)  # ROI位置
+        self._position = (0.0, 0.0)  # ROI位置 (这里我们希望存储左上角为原点的坐标)
         self._dimensions = (0.0, 0.0)  # ROI尺寸
 
     @classmethod
@@ -228,60 +226,49 @@ class RectROI(pg.RectROI):
     def update_image_stats(self, image: np.ndarray) -> None:
         """更新图像统计信息"""
         try:
-            # 获取ROI区域内的图像数据
-            # 如果ROI超出图像边界或尺寸为0，getArrayRegion将返回None
+            # --- 核心修改：更新位置和尺寸信息，现在PlotWidget的Y轴已经颠倒 (Y向下) ---
+            # get current position and size of ROI in pyqtgraph's PlotWidget coordinate system.
+            # since ViewBox.invertY(True) is set, (0,0) is top-left, and Y increases downwards.
+            current_pos_pg = self.pos() # ROI's bottom-left corner
+            current_size_pg = super().size() # ROI's width and height
+
+            # In a Y-down coordinate system where pos() is bottom-left,
+            x_display_top_left_origin = current_pos_pg.x()
+            y_display_top_left_origin = current_pos_pg.y() 
+            
+            self._position = (round(x_display_top_left_origin, 2), round(y_display_top_left_origin, 2))
+            self._dimensions = (round(current_size_pg.x(), 2), round(current_size_pg.y(), 2))
+            # ----------------------------------------------------------------------
+            
+            # 后续是图像统计信息计算，与坐标显示逻辑独立，保持不变
             region = self.getArrayRegion(image, self.image_item)
             
             if region is None or region.size == 0 or region.shape[0] == 0 or region.shape[1] == 0:
-                # print("ROI区域为空或无效，无法计算统计数据。")
-                # 可选：将统计数据重置为0或保持不变
                 self.image_stats = {k: 0 for k in self.image_stats}
-                self._position = (round(self.pos().x(), 2), round(self.pos().y(), 2))
-                size = super().size()
-                self._dimensions = (round(size.x(), 2), round(size.y(), 2))
-                return
+                return 
             
-            # 转换为8位无符号整数类型（OpenCV常用类型）
             if region.dtype != np.uint8:
                 region = region.astype(np.uint8)
             
-            # 如果是彩色图像，转换为灰度
             if len(region.shape) == 3:
                 region = cv2.cvtColor(region, cv2.COLOR_RGB2GRAY)
 
-
-            # GLCM 计算
-            # 仅当区域足够大（至少2x2像素）且有变化（并非所有像素都相同）时才计算GLCM
             if region.shape[0] >= 2 and region.shape[1] >= 2 and np.std(region) > 0:
-                levels = 32  # GLCM的灰度级数。通常将256级灰度图像量化到较少的级别（如8、16、32），目的是减小GLCM矩阵的尺寸（例如8x8而不是256x256）降低计算复杂性，并使计算出的纹理特征更具普适性和鲁棒性，减少噪声影响。
-                # 如果 levels=8，则每个量化区间的宽度为 256 // 8 = 32。像素值 0-31 会被映射为 0，32-63 映射为 1，依此类推。
+                levels = 32  
                 quantized_region = (region // (256 // levels)).astype(np.uint8)
                 
-                # 检查量化区域中的唯一值，如果只有一个，GLCM将失败
                 if len(np.unique(quantized_region)) > 1:
-                    glcm = graycomatrix(
-                        quantized_region, 
-                        distances=[1], # 考虑像素对之间的距离为1。这意味着只检查紧邻的像素。如果需要考虑不同距离，可以提供 [1, 2, 3] 等。
-                        angles=[0],# 考虑角度为0度（水平方向）。这意味着只检查像素右侧的相邻像素。其他常用角度包括 45, 90, 135 度。
-                        levels=levels, # GLCM矩阵的灰度级数，应与量化后的图像级别一致。
-                        symmetric=True, # 设置GLCM为对称矩阵。这意味着像素对(i,j)的出现次数与(j,i)相同。
-                        normed=True # 将GLCM归一化，使其元素表示概率。这是计算纹理属性的前提。
-                        )
-                    
-                    # 计算纹理特征
-                    energy = graycoprops(glcm, 'energy')[0, 0]# 能量：衡量图像纹理的均匀性和局部秩序。能量值越大，表示纹理越均匀、越细致，变化越小。
-                    correlation = graycoprops(glcm, 'correlation')[0, 0] #相关性：衡量像素灰度级之间空间依赖关系的线性度。值越大，表示灰度级之间相关性越强，纹理越粗糙、规律性越强。
-                    homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]# 同质性：衡量图像纹理的局部均匀性。值越大，表示灰度级差异越小，纹理越均匀、越平坦。
-                    contrast = graycoprops(glcm, 'contrast')[0, 0] # 对比度：反映图像纹理的对比度或局部灰度级差异的大小。值越大，表示纹理越深、越粗糙，灰度变化越剧烈。
-                else:
-                    # 如果经过量化后，区域内的所有像素值都相同（即没有变化），则无法计算有效的纹理特征。此时将所有纹理特征值设为0.0。
+                    glcm = graycomatrix(quantized_region, distances=[1], angles=[0], levels=levels, symmetric=True, normed=True)
+                    energy = graycoprops(glcm, 'energy')[0, 0]
+                    correlation = graycoprops(glcm, 'correlation')[0, 0]
+                    homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]
+                    contrast = graycoprops(glcm, 'contrast')[0, 0]
+                else: 
                     energy, correlation, homogeneity, contrast = 0.0, 0.0, 0.0, 0.0
-            else:
-                # 如果ROI区域尺寸不足以进行GLCM计算，或者原始区域内没有灰度变化（所有像素值都相同），则直接将所有纹理特征值设为0.0，表示无法计算。
+            else: 
                 energy, correlation, homogeneity, contrast = 0.0, 0.0, 0.0, 0.0
                 
 
-            # 计算并更新统计信息
             self.image_stats = {
                 'GrayMax': np.max(region),
                 'GrayMin': np.min(region),
@@ -293,18 +280,9 @@ class RectROI(pg.RectROI):
                 'Contrast': contrast
                 }
             
-            # 更新位置和尺寸信息
-            self._position = (round(self.pos().x(), 2), round(self.pos().y(), 2))
-            size = super().size()  # 显式调用父类的size方法
-            self._dimensions = (round(size.x(), 2), round(size.y(), 2))
-            
         except Exception as e:
-            # print(f"更新ROI {self.name} 的图像统计数据时出错: {str(e)}")
-            # 如果发生错误，将统计数据设置为0或N/A
-            self.image_stats = {k: 0 for k in self.image_stats} # 错误时重置
-            self._position = (round(self.pos().x(), 2), round(self.pos().y(), 2))
-            size = super().size()
-            self._dimensions = (round(size.x(), 2), round(size.y(), 2))
+            self.image_stats = {k: 0 for k in self.image_stats} 
+            # 错误时，位置和尺寸的更新已在函数开头处理，这里只处理统计信息错误
 
     @property
     def stats_formatted(self) -> Dict[str, str]:
@@ -313,7 +291,7 @@ class RectROI(pg.RectROI):
 
     @property
     def position(self) -> Tuple[float, float]:
-        """当前ROI位置"""
+        """当前ROI位置 (左上角为原点, Y轴向下), 这将用于显示在表格中。"""
         return self._position
 
     @property
@@ -324,19 +302,19 @@ class RectROI(pg.RectROI):
     def to_dict(self) -> Dict[str, Any]:
         """
         返回 ROI 可序列化的字典表示，用于保存到 TOML 文件。
+        注意：此处保存的是 pyqtgraph 内部的左下角为原点、Y轴向下（因为invertY=True）的坐标系统中的 Y 坐标，
+        以便加载时能正确重建 ROI 对象。
         """
-        pos = self.pos()
+        pos = self.pos() # 获取 pyqtgraph 内部的左下角坐标
         size = self.size()
         return {
             "unique_id": self.unique_id,
             "name": self.name,
             "pos_x": round(pos.x(), 2),
-            "pos_y": round(pos.y(), 2),
+            "pos_y": round(pos.y(), 2), # 保存 pyqtgraph 内部的 Y 坐标 (现在已经是Y向下)
             "size_x": round(size.x(), 2),
             "size_y": round(size.y(), 2),
         }
-
-# GroupItem 类已移除，因为它不再是新TOML结构所必需的。
 
 
 class ImageViewer(pg.PlotWidget):
@@ -353,12 +331,22 @@ class ImageViewer(pg.PlotWidget):
         self.showAxis('bottom', False)  # 隐藏底部坐标轴
         self.showAxis('left', False)  # 隐藏左侧坐标轴
         self.setMenuEnabled(False)  # 禁用右键菜单
+        self.setAspectLocked(True) # 确保无论窗口如何调整大小，图像的X和Y轴比例都将保持一致。
+        
+        # --- 核心修改：显式地反转Y轴，使(0,0)在顶部，Y向下增加 ---
+        self.getPlotItem().getViewBox().invertY(True)
+
 
     def update_image(self, image: np.ndarray) -> None:
-        """更新显示图像"""
+        """更新显示图像。
+        这里的'image'已经是经过方向校正的NumPy数组。
+        """
         self.image_item.setImage(image)  # 设置图像数据
         # 设置显示范围匹配图像尺寸
+        # 现在PlotWidget的(0,0)是左上角，Y向下增加。
+        # 所以setRange的y范围应该是(0, image.shape[0])
         self.setRange(xRange=[0, image.shape[1]], yRange=[0, image.shape[0]])
+ 
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -395,7 +383,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # 初始化ROI列表模型 (现在是QTreeView)
         self.tree_model = QStandardItemModel()
-        self.tree_model.setHorizontalHeaderLabels(["名称", "ID"]) # 注意：这里是“名称”而不是“ROI名称”了
+        self.tree_model.setHorizontalHeaderLabels(["名称", "ID"]) 
         self.treeView.setModel(self.tree_model)
 
         # 初始化属性表格模型
@@ -446,21 +434,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _on_item_name_changed(self, item: QStandardItem) -> None:
         """处理QTreeView中项目名称被手动修改的事件"""
-        # 仅处理第一列（名称）的数据变化
         if item.column() == 0:
             new_name = item.text()
-            
-            # 检查是否是ROI项
             roi_id = item.data(CustomRoles.RoiIdRole)
-            if roi_id is not None:
-                if roi_id in self.roi_manager.rois:
-                    roi = self.roi_manager.rois[roi_id]
-                    roi.name = new_name
-                    # print(f"ROI ID {roi_id} 的名称已更新为: {new_name}")
-            else: # 可能是组名，目前组名没有对应对象，不需要额外处理
-                # print(f"组名已更新为: {new_name}")
-                pass 
-
+            if roi_id is not None and roi_id in self.roi_manager.rois:
+                self.roi_manager.rois[roi_id].name = new_name
+            
     def _on_tree_selection_changed(self, current: QModelIndex, previous: QModelIndex) -> None:
         """
         处理QTreeView中选中项的变化。
@@ -498,7 +477,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.pushButton_1.setEnabled(True) # 仍然启用“添加ROI”（可以添加到父组）
                 self.delGroupButton.setEnabled(True) # 启用“删除ROI”按钮
             else:
-                # 如果项管理正确，不应该发生这种情况
                 self.roi_manager.set_active_group_item(None)
                 self.roi_manager._update_selection(None)
                 self.pushButton_1.setEnabled(False)
@@ -508,7 +486,6 @@ class MainWindow(QtWidgets.QMainWindow):
         """当ROIManager发出roi_selected信号时，更新属性表并选中树视图中的对应项"""
         self._update_property_table(roi)
         if roi:
-            # 在树视图中查找并选中该项
             for group_row in range(self.tree_model.rowCount()):
                 group_item = self.tree_model.item(group_row, 0)
                 if group_item:
@@ -516,26 +493,21 @@ class MainWindow(QtWidgets.QMainWindow):
                         roi_name_item = group_item.child(roi_row, 0)
                         if roi_name_item and roi_name_item.data(CustomRoles.RoiIdRole) == roi.unique_id:
                             index = self.tree_model.indexFromItem(roi_name_item)
-                            # 仅在当前未选中时才设置，以避免递归
                             if index != self.treeView.currentIndex():
                                 self.treeView.selectionModel().setCurrentIndex(
                                     index, QtCore.QItemSelectionModel.ClearAndSelect
                                 )
                             return
         else:
-            # 如果roi为None，则也清空树视图的选中
             self.treeView.selectionModel().clearSelection()
 
 
     def _on_group_selected_update_ui(self, group_item: Optional[QStandardItem]) -> None:
-        """当ROIManager发出group_selected信号时，主要用于调试或未来扩展"""
-        # print(f"ROIManager中选中的组: {group_item.text() if group_item else '无'}")
-        pass # UI状态主要由 _on_tree_selection_changed 处理
+        pass 
 
     def _add_group(self) -> None:
         """添加一个新组"""
         group_item = self.roi_manager.add_group()
-        # 自动选中新创建的组
         index = self.tree_model.indexFromItem(group_item)
         self.treeView.selectionModel().setCurrentIndex(
             index, QtCore.QItemSelectionModel.ClearAndSelect
@@ -552,15 +524,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if item is None:
             return
 
-        # 判断是组还是ROI
         if not current_index.parent().isValid():
-            # 这是组节点
             reply = QtWidgets.QMessageBox.question(
                 self, "删除确认", f"确定要删除分组 '{item.text()}' 及其下的所有ROI吗？",
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No
             )
             if reply == QtWidgets.QMessageBox.Yes:
-                # 遍历子项（ROI）并从ROIManager中删除它们
                 rois_to_delete = []
                 for row in range(item.rowCount()):
                     roi_name_item = item.child(row, 0)
@@ -572,16 +541,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 for roi_id in rois_to_delete:
                     self.roi_manager.remove_roi_by_id(roi_id)
                 
-                # 最后，从模型中删除该组
                 self.tree_model.removeRow(current_index.row())
-                # 删除后，清除选中状态
                 self.roi_manager.set_active_group_item(None) 
                 self.roi_manager._update_selection(None) 
                 self._update_property_table(None) 
                 QtWidgets.QMessageBox.information(self, "删除成功", f"分组 '{item.text()}' 及其下的ROI已删除。")
 
         else:
-            # 这是ROI节点
             reply = QtWidgets.QMessageBox.question(
                 self, "删除确认", f"确定要删除ROI '{item.text()}' 吗？",
                 QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No
@@ -590,9 +556,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 roi_id = item.data(CustomRoles.RoiIdRole)
                 if roi_id is not None:
                     self.roi_manager.remove_roi_by_id(roi_id)
-                    # remove_roi_by_id 将触发 _remove_from_tree_model
-                    # 它会处理从父级删除项的操作。
-                    # 删除后，清除ROI选中状态
                     self.roi_manager._update_selection(None) 
                     self._update_property_table(None) 
                     QtWidgets.QMessageBox.information(self, "删除成功", f"ROI '{item.text()}' 已删除。")
@@ -613,32 +576,27 @@ class MainWindow(QtWidgets.QMainWindow):
             self, "保存配置", "", "ROI配置 (*.toml)"
         )
         if not path:
-            print("未选择保存路径")
             return
 
-        # 这将是一个字典，其中键是组名，值是ROI字典的列表
         rois_by_group_data: Dict[str, List[Dict[str, Any]]] = {}
 
-        # 遍历QTreeView模型中的顶级项（组）
         for group_row in range(self.tree_model.rowCount()):
-            group_item = self.tree_model.item(group_row, 0) # 获取组名的QStandardItem
+            group_item = self.tree_model.item(group_row, 0) 
             if group_item:
                 group_name = group_item.text()
                 current_group_rois_list: List[Dict[str, Any]] = []
 
-                # 遍历当前组的子项（ROI）
                 for roi_child_row in range(group_item.rowCount()):
-                    roi_name_item = group_item.child(roi_child_row, 0) # 获取ROI名称的QStandardItem
+                    roi_name_item = group_item.child(roi_child_row, 0) 
                     if roi_name_item:
-                        roi_id = roi_name_item.data(CustomRoles.RoiIdRole) # 从自定义角色中检索ROI ID
+                        roi_id = roi_name_item.data(CustomRoles.RoiIdRole) 
                         if roi_id is not None and roi_id in self.roi_manager.rois:
                             roi_obj = self.roi_manager.rois[roi_id]
-                            current_group_rois_list.append(roi_obj.to_dict()) # 添加ROI的可序列化字典
+                            current_group_rois_list.append(roi_obj.to_dict()) 
 
                 rois_by_group_data[group_name] = current_group_rois_list
 
         try:
-            # 将 rois_by_group_data 包装在一个顶级键为 "rois" 的字典中
             toml_data = {"rois": rois_by_group_data}
             
             with open(path, "w", encoding="utf-8") as f:
@@ -655,31 +613,24 @@ class MainWindow(QtWidgets.QMainWindow):
             self, "加载配置", "", "ROI配置 (*.toml)"
         )
         if not path:
-            print("未选择加载路径")
             return
 
         try:
             with open(path, "r", encoding="utf-8") as f:
                 config_data = toml.load(f)
             
-            # 加载新数据前，清空现有数据
             self.roi_manager.clear_all_items()
-            RectROI.reset_counter(0) # 加载前重置ROI ID计数器
+            RectROI.reset_counter(0) 
 
-            # 获取顶层 'rois' 表，它应该是一个字典，其中键是组名，值是ROI字典的列表。
             rois_by_group_data = config_data.get("rois", {}) 
             if not isinstance(rois_by_group_data, dict):
                 raise ValueError("TOML文件中的'rois'部分不是字典或缺失。")
 
             max_roi_id = 0
             
-            # 遍历组（rois_by_group_data 的键）
             for group_name, rois_list_for_group in rois_by_group_data.items():
-                group_item = self.roi_manager.add_group(group_name=group_name) # 添加组到模型
-
-                # 临时设置 ROIManager 的 active_group_item
-                # 以便后续 roi_manager.add_roi 调用能将 ROI 正确关联到
-                # 树模型中的这个特定组项。
+                group_item = self.roi_manager.add_group(group_name=group_name) 
+                
                 self.roi_manager.set_active_group_item(group_item) 
                 
                 if not isinstance(rois_list_for_group, list):
@@ -694,14 +645,13 @@ class MainWindow(QtWidgets.QMainWindow):
                     unique_id = roi_dict.get('unique_id')
                     name = roi_dict.get('name')
                     pos_x = roi_dict.get('pos_x', 50)
-                    pos_y = roi_dict.get('pos_y', 50)
+                    pos_y = roi_dict.get('pos_y', 50) # 这个pos_y现在也是Y向下坐标系了
                     size_x = roi_dict.get('size_x', 100)
                     size_y = roi_dict.get('size_y', 100)
                     
                     if unique_id is not None:
                         max_roi_id = max(max_roi_id, unique_id)
 
-                    # roi_manager.add_roi 在内部使用 self.roi_manager.active_group_item
                     self.roi_manager.add_roi(
                         x=pos_x, 
                         y=pos_y, 
@@ -711,17 +661,14 @@ class MainWindow(QtWidgets.QMainWindow):
                         name=name
                     )
                 
-            # 加载完所有组和ROI后，清除UI中的任何选中状态。
             self.treeView.selectionModel().clearSelection()
-            self.roi_manager.set_active_group_item(None) # 确保ROIManager的活动组被清空
-            self.roi_manager._update_selection(None) # 确保绘图区的ROI未被选中
-            self._update_property_table(None) # 清空属性表
-            self.pushButton_1.setEnabled(False) # 禁用“添加ROI”按钮
-            self.delGroupButton.setEnabled(False) # 禁用“删除组/ROI”按钮
+            self.roi_manager.set_active_group_item(None) 
+            self.roi_manager._update_selection(None) 
+            self._update_property_table(None) 
+            self.pushButton_1.setEnabled(False) 
+            self.delGroupButton.setEnabled(False) 
 
-
-            # 加载所有ROI后，确保计数器正确设置为将来新ROI的ID
-            RectROI.reset_counter(max_roi_id + 1) # 将计数器设置为 max_roi_id + 1，用于下一个唯一ID
+            RectROI.reset_counter(max_roi_id + 1) 
             QtWidgets.QMessageBox.information(self, "加载成功", "ROI配置已成功加载！")
 
         except Exception as e:
@@ -732,69 +679,72 @@ class MainWindow(QtWidgets.QMainWindow):
     def load_image(self) -> None:
         """加载图像文件"""
         try:
-            # 打开文件对话框选择图像
             path, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self, "打开图像", "", "Images (*.jpg *.png *.bmp)")
             if not path:
                 return
 
-            # 读取图像文件
             image = cv2.imread(path)
             if image is None:
                 raise ValueError("无法读取图像文件")
 
-            # 转换颜色空间(BGR转RGB)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            self._process_image(image)  # 处理并显示图像
+            self._process_image(image)  
         except Exception as e:
-            self._show_error(f"加载图像失败: {str(e)}")  # 显示错误信息
+            self._show_error(f"加载图像失败: {str(e)}")  
 
     def _process_image(self, image: np.ndarray) -> None:
-        """处理并显示图像"""
-        self.image_viewer.update_image(image)  # 更新图像显示
-        self.roi_manager.update_image_data(image)  # 更新ROI管理器中的图像数据
+        """
+        处理并显示图像。
+        此方法现在包含对图像进行方向校正的逻辑。
+        """
+        # pyqtgraph在您的环境中会默认逆时针旋转图片90度，所以需要顺时针90度抵消。
+        # 旋转后，图像的形状会从 (H, W) 变为 (W, H)。
+        corrected_image = np.rot90(image, k=-1)
+
+        self.image_viewer.update_image(corrected_image)  
+        # 更新ROI管理器中的图像数据，统计计算基于校正后的图像。
+        # 因为ImageItem的Y轴已经颠倒，ROI现在会在正确的方向进行计算。
+        self.roi_manager.update_image_data(corrected_image)  
 
     def toggle_camera(self) -> None:
         """切换摄像头状态"""
         if self.timer.isActive():
-            self._stop_camera()  # 如果定时器在运行，停止摄像头
+            self._stop_camera()  
         else:
-            self._start_camera()  # 否则启动摄像头
+            self._start_camera()  
 
     def _start_camera(self) -> None:
         """启动摄像头"""
-        # 尝试打开默认摄像头，或者根据需要指定摄像头索引
         if not self.capture.open(0):  
             self._show_error("无法打开摄像头")
             return
-        self.timer.start(30)  # 启动定时器，30ms刷新一次
+        self.timer.start(30)  
 
     def _stop_camera(self) -> None:
         """停止摄像头"""
-        self.timer.stop()  # 停止定时器
-        self.capture.release()  # 释放摄像头资源
+        self.timer.stop()  
+        self.capture.release()  
 
     def _update_camera_frame(self) -> None:
         """更新摄像头帧"""
-        ret, frame = self.capture.read()  # 读取一帧
+        ret, frame = self.capture.read()  
         if ret:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # 转换颜色空间
-            # frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)  # 旋转90度 (根据需要调整)
-            self._process_image(frame)  # 处理并显示图像
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+            self._process_image(frame)  
 
     def _update_property_table(self, roi: Optional[RectROI]) -> None:
         """更新属性表格"""
-        self.property_model.clear()  # 清空表格
-        self.property_model.setHorizontalHeaderLabels(["属性", "值"]) # 重新设置表头
+        self.property_model.clear()  
+        self.property_model.setHorizontalHeaderLabels(["属性", "值"]) 
 
         if roi is None:
             return
 
-        # 准备要显示的属性数据
         properties = {
             "ID": roi.unique_id,
             "名称": roi.name,
-            "位置": f"({roi.position[0]}, {roi.position[1]})",
+            "位置": f"({roi.position[0]}, {roi.position[1]})", 
             "尺寸": f"({roi.dimensions[0]}, {roi.dimensions[1]})",
             "最大灰度值": roi.stats_formatted.get('GrayMax', 'N/A'),
             "最小灰度值": roi.stats_formatted.get('GrayMin', 'N/A'),
@@ -806,17 +756,12 @@ class MainWindow(QtWidgets.QMainWindow):
             "对比度": roi.stats_formatted.get('Contrast', 'N/A')
         }
 
-        # 逐行添加属性数据
         for row, (key, value) in enumerate(properties.items()):
-            # 创建属性名称项（第一列）
             key_item = QStandardItem(str(key))
-            
-            # 从 PROPERTY_TOOLTIPS 字典中获取对应的提示文本
             tooltip_text = self.PROPERTY_TOOLTIPS.get(key, "") 
-            if tooltip_text: # 如果存在提示文本，则设置
+            if tooltip_text: 
                 key_item.setToolTip(tooltip_text)
             
-            # 创建属性值项（第二列）
             value_item = QStandardItem(str(value))
 
             self.property_model.setItem(row, 0, key_item)
@@ -828,13 +773,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         """窗口关闭事件处理"""
-        self._stop_camera()  # 确保摄像头被正确释放
+        self._stop_camera()  
         super().closeEvent(event)
 
 
 if __name__ == "__main__":
-    os.chdir(sys.path[0])  # 切换到脚本所在目录
-    app = QtWidgets.QApplication(sys.argv)  # 创建应用实例
-    window = MainWindow()  # 创建主窗口实例
-    window.show()  # 显示窗口
-    sys.exit(app.exec_())  # 进入主事件循环
+    os.chdir(sys.path[0])  
+    app = QtWidgets.QApplication(sys.argv)  
+    window = MainWindow()  
+    window.show()  
+    sys.exit(app.exec_())  
+
