@@ -704,6 +704,8 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         # pyqtgraph在您的环境中会默认逆时针旋转图片90度，所以需要顺时针90度抵消。
         corrected_image = np.rot90(image, k=-1)
+        corrected_image = np.flip(corrected_image, axis=1)
+        
 
         self.image_viewer.update_image(corrected_image)  
         self.roi_manager.update_image_data(corrected_image)  
@@ -756,6 +758,10 @@ class MainWindow(QtWidgets.QMainWindow):
             "均匀性": roi.stats_formatted.get('Homogeneity', 'N/A'),
             "对比度": roi.stats_formatted.get('Contrast', 'N/A')
         }
+        x2=round(roi.position[0]+roi.dimensions[0],2)
+        y2=round(roi.position[1]+roi.dimensions[1],2)
+
+        print(f"长宽模式：[{roi.position[0]},{roi.position[1]},{roi.dimensions[0]},{roi.dimensions[1]}]    坐标模式[{roi.position[0]},{roi.position[1]},{x2},{y2}]")
 
         for row, (key, value) in enumerate(properties.items()):
             key_item = QStandardItem(str(key))
