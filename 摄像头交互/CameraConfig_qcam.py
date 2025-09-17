@@ -106,11 +106,14 @@ class CamSetting(QtWidgets.QMainWindow):
                     print(f"[ERROR] Method {method_name} not found")
         return setter
 
+
     def refresh_cam_list(self):
         self.comboBox_camid.clear()
         cameras = QtMultimedia.QCameraInfo.availableCameras()
         for cam in cameras:
             self.comboBox_camid.addItem(cam.description(), cam)
+            print(f" - 发现摄像头(设备名: {cam.deviceName()}, 描述: {cam.description()})")
+
 
     def select_cam(self, index):
         if self.camera and self.camera.status() == QtMultimedia.QCamera.ActiveStatus:
