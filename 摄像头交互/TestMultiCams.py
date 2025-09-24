@@ -22,8 +22,8 @@ from PyQt5.QtMultimediaWidgets import QCameraViewfinder
 # --- 配置参数 ---
 PREVIEW_WINDOW_WIDTH = 320
 PREVIEW_WINDOW_HEIGHT = 240
-PHOTO_WIDTH = 320
-PHOTO_HEIGHT = 240
+PHOTO_WIDTH = 640
+PHOTO_HEIGHT = 480
 START_CAMERA_INDEX = 0
 END_CAMERA_INDEX = 5
 SAVE_IMAGE_DIR = "captured_images_pyqt"
@@ -87,7 +87,7 @@ class CameraWidget(QWidget):
             encoder_settings.setCodec("image/jpeg")
             desired_resolution = QSize(PHOTO_WIDTH, PHOTO_HEIGHT)
             
-            print(f"摄像头 {self.app_camera_index}: 尝试强制设置拍照分辨率为 1920x1080")
+            print(f"摄像头 {self.app_camera_index}: 尝试强制设置拍照分辨率为 {PHOTO_WIDTH}x{PHOTO_HEIGHT}")
             encoder_settings.setResolution(desired_resolution)
             self.image_capture.setEncodingSettings(encoder_settings)
             
